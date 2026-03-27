@@ -3,20 +3,26 @@
 
 %clear; close all;
 
-initial_date = [2026 03 01] ; 
-final_date = [2026 03 06]; 
+initial_date = [2026 03 03] ; 
+final_date = [2026 03 025]; 
 
 file_dir = "/Volumes/FnP/Fish&Plants/data/TH" + "/";
 
 str_format_date = "yyyy_mm_dd"; 
-str_format_name_data = "TH%s.txt";
+str_format_name_data = "TH_%s.txt";
 
 str_irrigation = "irrigation_data";
 
+
+compute_stats = 1; %compute max, min, mean. 0= false, 1=true
+
+
 % [plot T and H vs time, plot VPD vs time]
 %  1 = yes, 0 = no
-plotting = [1,1];
-plot_comparison_ext_int = 1; %compare external and internal T and H: 0 no, 1 yes
+plotting = [0,0];
+plot_comparison_ext_int = 0; %compare external and internal T and H: 0 no, 1 yes
+
+
 
 % ARPAE dataset
 file_temp_ext_dir = "/Volumes/FnP/Fish&Plants/data/TH_ext" +  "/";
@@ -54,7 +60,7 @@ days = datestr(days,str_format_date);
 
 if status == 1 % no errors in dates
     
-    data_set = table(); %initialize the dataset
+    data_set = timetable(); %initialize the dataset
     
     
     % Set up the Import Options
@@ -86,10 +92,14 @@ if status == 1 % no errors in dates
         fid = file_dir + file_name; %full string for the file, dir + name
         
         
-        
-        % Import the data in to the workspace
-        data_temp = readtable(fid, opts);
-        
+        try
+            % Import the data in to the workspace
+            data_temp = readtimetable(fid, opts);
+        catch ME
+            warning('%s file not present. Anable to read this', file_name)
+            continue
+        end
+            
         %Putting all the values in a table
         data_set = [data_set; data_temp];
         
@@ -115,7 +125,7 @@ if status == 1 % no errors in dates
                                           
   
      % Clear temporary variables
-    clear opts fid    
+    clear opts fid data_temp
             
 end
 
@@ -147,7 +157,7 @@ fprintf("ΔTmax = %.1f °C \tΔHmax = %.1f %%\n", max_dTint, max_dHint);
 if plot_comparison_ext_int
     dataset_ext = import_data_ext(file_temp_ext_dir + cell_number + "_" + initial_date(1) + "_" + type_measure, [2,Inf]);
     if istimetable(dataset_ext)
-        subset_dataset_ext = dataset_ext(timerange(start,stop, 'closed'),:);
+        subset_dataset_ext = dataset_ext(timerange(start,stop+1, 'closed'),:);
     
         disp("Data file ARPAE succefully readed")
     
@@ -162,7 +172,14 @@ if plot_comparison_ext_int
 end
 
 
-
+if compute_stats
+    data_set_max_daily = retime(data_set, 'daily', 'max');
+    data_set_min_daily = retime(data_set, 'daily', 'min');
+    data_set_avg_daiy = retime(data_set, 'daily', 'mean');
+    disp('=========================')
+    disp('Averages Computed')
+    disp('=========================')
+end
 
 
 
@@ -238,6 +255,7 @@ end
 
 
 if plot_comparison_ext_int
+    % Temperature: indoor vs outdoor
     fig3 = figure(3);
     ax3 = axes(fig3);
     box(ax3,'on')
@@ -251,7 +269,7 @@ if plot_comparison_ext_int
     set(ax3,'FontSize',font_size)
  
 
-
+    % Humidity: indoor vs outdoor
     fig4 = figure(4);
     ax4 = axes(fig4);
     box(ax4,'on')
@@ -263,6 +281,26 @@ if plot_comparison_ext_int
     legend()
     ylabel('Humidity [%]')
     set(ax4,'FontSize',font_size)
+
+        
+    %solar radiation vs indoor temperature
+    fig5 = figure(5);
+    ax5 = axes(fig5);
+    box(ax5,'on');
+    hold(ax5,'on');
+
+    yyaxis left
+    plot(subset_dataset_ext.Time, subset_dataset_ext.RAD,'+-','LineWidth',1.5)
+    ylabel('Global Radiation Flux [W/m^2]')
+    
+    yyaxis right
+    plot(data_set.datetime, data_set.Tint,'+-','LineWidth',1.5)
+    ylabel('Indoor temperature [°C]')
+
+    hold(ax5,'off');
+    set(ax5,'FontSize',font_size)
+
+
 end
 
 
