@@ -3,7 +3,7 @@
 
 %clear; close all;
 
-initial_date = [2026 03 03] ; 
+initial_date = [2026 03 24] ; 
 final_date = [2026 03 25]; 
 
 file_dir = "/Volumes/FnP/Fish&Plants/data/TH" + "/";
@@ -26,10 +26,9 @@ plot_comparison_ext_int = 1; %compare external and internal T and H: 0 no, 1 yes
 
 % ARPAE dataset
 file_temp_ext_dir = "/Volumes/FnP/Fish&Plants/data/TH_ext" +  "/";
-arpae_url = "https://dati-simc.arpae.it/opendata/erg5v2/timeseries/";
 cell_number = "01945";
 type_measure = "h";
-get_ARPAE_data(arpae_url, cell_number, "2026", file_temp_ext_dir);
+
 
 
 % Plotting Variable
@@ -305,6 +304,31 @@ if plot_comparison_ext_int
 end
 
 
+
+
+
+
+%% Fit
+
+% %using posixtime in seconds
+% x = posixtime(data_set.datetime);
+% x = x - x(1);
+
+%using minutes
+x1 = minutes(data_set.datetime - data_set.datetime(1));
+y1= data_set.Tint;
+
+x2 = minutes(subset_dataset_ext.Time - subset_dataset_ext.Time(1));
+y2 = subset_dataset_ext.RAD;
+
+
+figure, plot(x1,y1)
+
+
+
+
+
+
 %% Functions
 
 function [status] = control_date(initial_date, final_date)
@@ -387,23 +411,4 @@ end
 
 
 
-
-
-function []= get_ARPAE_data(base_url, parcel, year, save_dir)
-%
-% Function that download directly the ARPAE data from https://dati-simc.arpae.it/opendata/erg5v2/timeseries/
-%
-file_name = sprintf("%s_%s.zip",parcel, year); %e.g: 01965_2026.zip
-baseURL = base_url + parcel + "/" + file_name; %the url of download
-
-websave(sprintf("%s%s_%s.zip",save_dir,parcel,year),baseURL) %saving data from web
-fprintf('FILE ARPAE %s downloaded and saved in %s', file_name, save_dir) 
-
-unzip(save_dir+file_name, save_dir) %unzipping the .zip file
-delete(save_dir+file_name) %deleeting the zip file
-
-
-movefile(sprintf("%s%s_%s_d.csv",save_dir,parcel,year),sprintf("%sday_resolved/",save_dir))
-
-end
 
